@@ -1,38 +1,30 @@
 const API_BASE = "http://127.0.0.1:8000/api";
+let allOrders = []; // Lưu trữ dữ liệu gốc
+let statusChartInst = null;
+let timelineChartInst = null;
 
-// Biến toàn cục để lưu trữ toàn bộ dữ liệu gốc, phục vụ cho việc tìm kiếm
-let allOrders = []; 
-
-// ==================== BADGE TRẠNG THÁI ====================
+// Badge trạng thái
 const STATUS_BADGE = {
-    "Shipped":    "bg-success",
-    "Resolved":   "bg-info",
-    "Cancelled":  "bg-danger",
-    "On Hold":    "bg-warning text-dark",
-    "In Process": "bg-primary",
-    "Disputed":   "bg-secondary",
+    "Shipped": "bg-success", "Resolved": "bg-info", "Cancelled": "bg-danger",
+    "On Hold": "bg-warning text-dark", "In Process": "bg-primary", "Disputed": "bg-secondary",
 };
 
 function statusBadge(status) {
-    const cls = STATUS_BADGE[status] || "bg-secondary";
-    return `<span class="badge ${cls}">${status}</span>`;
+    return `<span class="badge ${STATUS_BADGE[status] || "bg-secondary"}">${status}</span>`;
 }
 
 function formatDate(dateStr) {
     if (!dateStr) return "—";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("vi-VN");
+    return new Date(dateStr).toLocaleDateString("vi-VN");
 }
 
-// ==================== HIỂN THỊ BẢNG ====================
+// 1. Vẽ bảng
 function renderTable(orders) {
     const tbody = document.getElementById("orderTableBody");
-
     if (!orders || orders.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Không tìm thấy đơn hàng nào.</td></tr>`;
         return;
     }
-
     tbody.innerHTML = orders.map(o => `
         <tr>
             <td><strong>#${o.orderNumber}</strong></td>
@@ -45,65 +37,72 @@ function renderTable(orders) {
     `).join("");
 }
 
-// ==================== TẢI DỮ LIỆU ====================
-async function fetchOrders() {
-    const tbody = document.getElementById("orderTableBody");
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center">Đang tải dữ liệu...</td></tr>`;
+// 2. Vẽ biểu đồ
+function updateCharts(ordersData) {
+    const container = document.getElementById("chartContainer");
+    if (container.style.display === "none") return; // Không vẽ nếu đang ẩn
 
-    try {
-        const res = await fetch(`${API_BASE}/orders/`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        // Lưu dữ liệu tải về vào biến toàn cục thay vì biến cục bộ
-        allOrders = await res.json(); 
-        
-        // Hiển thị lần đầu
-        renderTable(allOrders);
-    } catch (err) {
-        console.error("fetchOrders error:", err);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-danger">
-                    Không thể kết nối tới server. Hãy đảm bảo backend đang chạy.
-                </td>
-            </tr>`;
-    }
-}
+    const statusCount = {};
+    const dateCount = {};
 
-// ==================== TÌM KIẾM ====================
-function handleSearch() {
-    // Lấy từ khóa, chuyển về chữ thường và xóa khoảng trắng thừa
-    const keyword = document.getElementById("searchInput").value.toLowerCase().trim();
-
-    // Nếu ô tìm kiếm trống, hiển thị lại toàn bộ dữ liệu gốc
-    if (!keyword) {
-        renderTable(allOrders);
-        return;
-    }
-
-    // Lọc mảng allOrders dựa trên từ khóa
-    const filteredOrders = allOrders.filter(o => {
-        const orderNum = String(o.orderNumber).toLowerCase();
-        const customerNum = String(o.customerNumber).toLowerCase();
-        const status = String(o.status).toLowerCase();
-
-        // Kiểm tra xem từ khóa có nằm trong Mã đơn, Mã KH hoặc Trạng thái không
-        return orderNum.includes(keyword) || 
-               customerNum.includes(keyword) || 
-               status.includes(keyword);
+    ordersData.forEach(o => {
+        statusCount[o.status] = (statusCount[o.status] || 0) + 1;
+        const date = o.orderDate ? o.orderDate.split('T')[0] : "Unknown";
+        dateCount[date] = (dateCount[date] || 0) + 1;
     });
 
-    // Vẽ lại bảng với dữ liệu đã lọc
-    renderTable(filteredOrders);
+    const sortedDates = Object.keys(dateCount).sort();
+
+    // Hủy biểu đồ cũ nếu tồn tại
+    if (statusChartInst) statusChartInst.destroy();
+    if (timelineChartInst) timelineChartInst.destroy();
+
+    // Biểu đồ tròn trạng thái
+    statusChartInst = new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(statusCount),
+            datasets: [{ data: Object.values(statusCount), backgroundColor: ['#28a745', '#17a2b8', '#dc3545', '#ffc107', '#007bff', '#6c757d'] }]
+        }
+    });
+
+    // Biểu đồ đường thời gian
+    timelineChartInst = new Chart(document.getElementById('timelineChart'), {
+        type: 'line',
+        data: {
+            labels: sortedDates,
+            datasets: [{ label: 'Số lượng đơn', data: sortedDates.map(d => dateCount[d]), borderColor: '#007bff', tension: 0.3, fill: true, backgroundColor: 'rgba(0, 123, 255, 0.1)' }]
+        }
+    });
 }
 
-// ==================== KHỞI CHẠY ====================
-document.addEventListener("DOMContentLoaded", () => {
-    fetchOrders();
+// 3. Hàm tìm kiếm & Lọc
+function handleSearch() {
+    const keyword = document.getElementById("searchInput").value.toLowerCase().trim();
+    const filtered = allOrders.filter(o => 
+        String(o.orderNumber).toLowerCase().includes(keyword) || 
+        String(o.customerNumber).toLowerCase().includes(keyword) || 
+        String(o.status).toLowerCase().includes(keyword)
+    );
+    renderTable(filtered);
+    updateCharts(filtered); // Cập nhật biểu đồ theo kết quả lọc
+}
 
-    // Gắn sự kiện lắng nghe mỗi khi người dùng gõ phím vào ô tìm kiếm
-    const searchInput = document.getElementById("searchInput");
-    if (searchInput) {
-        searchInput.addEventListener("input", handleSearch);
+// 4. Khởi chạy
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch(`${API_BASE}/orders/`);
+        allOrders = await res.json();
+        renderTable(allOrders);
+    } catch (err) {
+        console.error(err);
     }
+
+    document.getElementById("searchInput").addEventListener("input", handleSearch);
+
+    document.getElementById("toggleChartBtn").addEventListener("click", () => {
+        const container = document.getElementById("chartContainer");
+        container.style.display = container.style.display === "none" ? "flex" : "none";
+        handleSearch(); // Gọi để vẽ biểu đồ ngay khi hiện
+    });
 });

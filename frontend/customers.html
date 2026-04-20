@@ -21,9 +21,25 @@
     <div class="container mt-4">
         <h2>Danh sách Khách hàng</h2>
         
-        <div class="input-group mb-3 mt-3 w-50">
-            <input type="text" id="searchInput" class="form-control" placeholder="Nhập tên khách hàng để tìm kiếm...">
-            <button class="btn btn-primary" id="searchBtn">Tìm kiếm</button>
+        <div class="row mb-4 mt-3 align-items-center">
+            <div class="col-md-5 mb-2 mb-md-0">
+                <input type="text" id="searchInput" class="form-control" placeholder="Tìm tên, SĐT, thành phố, quốc gia...">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-outline-success" id="toggleChartBtn">
+                    🌍 Xem Phân bổ Quốc gia
+                </button>
+            </div>
+        </div>
+
+        <div id="chartContainer" class="row mb-4" style="display: none;">
+            <div class="col-md-8 offset-md-2"> <div class="card card-body shadow-sm">
+                    <h5 class="card-title text-center">Tỷ trọng Khách hàng theo Quốc gia</h5>
+                    <div style="position: relative; height: 300px;"> 
+                        <canvas id="countryChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="table-responsive bg-white shadow-sm p-3 rounded">
@@ -45,6 +61,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="js/customers.js"></script>
 </body>
 </html>

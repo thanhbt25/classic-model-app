@@ -21,18 +21,33 @@
     <div class="container mt-4">
         <h2>Danh sách Đơn hàng gần đây</h2>
 
-        <div class="row mb-3">
-            <div class="col-md-6 col-lg-4">
-                <div class="input-group">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Tìm theo Mã đơn, Mã KH, Trạng thái...">
-                    <button class="btn btn-primary" type="button" id="searchBtn">
-                        <i class="fas fa-search"></i> Tìm kiếm
-                    </button>
+        <div class="row mb-4 mt-3 align-items-center">
+            <div class="col-md-5 mb-2 mb-md-0">
+                <input type="text" id="searchInput" class="form-control" placeholder="Tìm theo Mã đơn, Mã KH, Trạng thái...">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-outline-primary" id="toggleChartBtn">
+                    📊 Xem / Ẩn Biểu Đồ
+                </button>
+            </div>
+        </div>
+
+        <div id="chartContainer" class="row mb-4" style="display: none;">
+            <div class="col-md-4">
+                <div class="card card-body h-100">
+                    <h5 class="card-title text-center">Trạng thái Đơn hàng</h5>
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card card-body h-100">
+                    <h5 class="card-title text-center">Số lượng đơn theo ngày</h5>
+                    <canvas id="timelineChart"></canvas>
                 </div>
             </div>
         </div>
         
-        <div class="table-responsive bg-white shadow-sm p-3 rounded mt-3">
+        <div class="table-responsive bg-white shadow-sm p-3 rounded">
             <table class="table table-hover align-middle">
                 <thead class="table-dark">
                     <tr>
@@ -51,6 +66,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="js/orders.js"></script>
 </body>
 </html>
